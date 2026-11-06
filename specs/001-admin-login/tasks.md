@@ -254,7 +254,7 @@
 - [X] T149 [P] Create .env.example, without real values, and the ignored local .env in servers/club-management-infra/.env.example
 - [X] T150 [P] Create .env.example, without real values, and the ignored local .env in servers/club-management-server/.env.example
 - [X] T151 Use each project's optional .env in servers/club-management-server/docker-compose.yml
-- [ ] T152 Check manually that indexes, login and password reset work against Azure DocumentDB and that Brevo delivers the email, and record the result in specs/001-admin-login/azure-brevo-check.md — Omitted: needs the IP allowed in Azure and Brevo, and SMTP_FROM
+- [ ] T152 Check manually that indexes, login and password reset work against Azure DocumentDB and that Brevo delivers the email, and record the result in specs/001-admin-login/azure-brevo-check.md — Omitted: needs the IP allowed in Azure and Brevo
 
 ## Login attempts
 
@@ -307,3 +307,7 @@
 - [X] T187 Validate the login form with a Zod schema before sending in apps/club-management-admin/src/pages/Login/services/login-form-schema.ts
 - [X] T188 Validate the forgot password form with a Zod schema before sending in apps/club-management-admin/src/pages/ForgotPassword/services/forgot-password-form-schema.ts
 - [X] T189 Validate the new password form with a Zod schema before sending in apps/club-management-admin/src/pages/ForgotPassword/services/reset-password-form-schema.ts
+
+## Pipeline
+
+- [X] T190 Wait for the stack with a real login, limit the wait and show the logs on cancellation in .github/workflows/ci.yml
