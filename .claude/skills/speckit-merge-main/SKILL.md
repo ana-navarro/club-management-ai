@@ -32,10 +32,14 @@ anything else. Never force push, and do not delete the branch.
 
 2. **Check every affected repository before merging anything**, and report all the problems found:
    - The working tree is clean (`git -C [repo] status --porcelain` is empty).
-   - The latest commit of `origin/[branch]` has GitHub Actions runs, and all of them finished with
-     `success`. List them from inside the repository with
-     `gh run list --commit [sha] --json name,status,conclusion,url`. Do not wait for runs in progress:
-     report them and stop.
+   - The latest commit of `origin/[branch]` has GitHub Actions runs, and the latest run of each
+     workflow finished with `success`. List them from inside the repository with
+     `gh run list --commit [sha] --json name,status,conclusion,url,createdAt`. Do not wait for runs in
+     progress: report them and stop.
+   - The latest AI Pipeline run for this branch finished with `success`, even if the root does not
+     have the branch. Every project commit triggers it, so find it with
+     `gh run list -R [owner]/club-management-ai --workflow ci.yml --json displayTitle,status,conclusion,url,createdAt`
+     and take the newest whose `displayTitle` is `AI Pipeline ([branch])`.
    - `git -C [repo] merge-tree --write-tree origin/main origin/[branch]` exits with 0. Any other exit
      code means a conflict. Do not resolve conflicts here.
 

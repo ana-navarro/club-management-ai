@@ -1,12 +1,19 @@
 name: AI Pipeline
+run-name: AI Pipeline (${{ inputs.project_branch || github.ref_name }})
 
-# Integrated pipeline: checks every project together. For each project it uses the branch with the
-# same name as this repository's branch, or main if there is none.
+# Integrated pipeline: checks every project together. It runs on every commit in this repository,
+# and every commit in a project repository triggers it with that project's branch. For each project
+# it uses the branch with that name, or main if there is none.
 
 on:
   push:
     branches: ['**']
   workflow_dispatch:
+    inputs:
+      project_branch:
+        description: Branch to use in each project. Defaults to this run's branch.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -29,9 +36,10 @@ jobs:
         working-directory: .
         env:
           URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+          BRANCH: ${{ inputs.project_branch || github.ref_name }}
         run: |
-          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
-            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code "$URL" "refs/heads/$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
           else
             echo "ref=main" >> "$GITHUB_OUTPUT"
           fi
@@ -86,9 +94,10 @@ jobs:
         working-directory: .
         env:
           URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+          BRANCH: ${{ inputs.project_branch || github.ref_name }}
         run: |
-          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
-            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code "$URL" "refs/heads/$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
           else
             echo "ref=main" >> "$GITHUB_OUTPUT"
           fi
@@ -134,9 +143,10 @@ jobs:
         working-directory: .
         env:
           URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+          BRANCH: ${{ inputs.project_branch || github.ref_name }}
         run: |
-          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
-            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code "$URL" "refs/heads/$BRANCH" >/dev/null; then
+            echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
           else
             echo "ref=main" >> "$GITHUB_OUTPUT"
           fi
@@ -172,42 +182,43 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [club-management-client, club-management-admin]
+        include:
+          - project: club-management-client
+            port: 8080
+          - project: club-management-admin
+            port: 8081
     steps:
       - uses: actions/checkout@v7
 
-      - name: Resolve project branch
-        id: ref
+      - name: Get all projects
         env:
-          URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+          OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ inputs.project_branch || github.ref_name }}
         run: |
-          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
-            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
-          else
-            echo "ref=main" >> "$GITHUB_OUTPUT"
-          fi
+          for path in             apps/club-management-client             apps/club-management-admin             services/club-management-client-bff             services/club-management-admin-bff             services/club-management-users-svc             services/club-management-scheduling-svc             services/club-management-payment-svc             services/club-management-championshp-svc; do
+            url="https://github.com/$OWNER/$(basename "$path").git"
+            ref=main
+            if git ls-remote --exit-code "$url" "refs/heads/$BRANCH" >/dev/null; then
+              ref=$BRANCH
+            fi
+            echo "$path: $ref"
+            git clone --quiet --depth 1 --branch "$ref" "$url" "$path"
+          done
 
-      - uses: actions/checkout@v7
-        with:
-          repository: ${{ github.repository_owner }}/${{ matrix.project }}
-          ref: ${{ steps.ref.outputs.ref }}
-          path: project
+      - name: Start the stack
+        working-directory: servers/club-management-server
+        env:
+          PORT_TO_CHECK: ${{ matrix.port }}
+        run: |
+          docker compose up -d
+          curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/" > /dev/null
+          curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/api/health" > /dev/null
 
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: |
-            project/package-lock.json
-            e2e/${{ matrix.project }}/package-lock.json
-
-      - name: Build and start the app
-        working-directory: project
-        run: |
-          npm ci
-          npm run build
-          nohup npm run preview -- --port 4173 --host 127.0.0.1 > preview.log 2>&1 &
-          curl --retry 30 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:4173 > /dev/null
+          cache-dependency-path: e2e/${{ matrix.project }}/package-lock.json
 
       - name: Cypress (mobile viewport)
         working-directory: e2e/${{ matrix.project }}
@@ -215,6 +226,11 @@ jobs:
           npm ci
           npx cypress install
           npx cypress run
+
+      - name: Show stack logs
+        if: failure()
+        working-directory: servers/club-management-server
+        run: docker compose logs --no-color --tail 100
 
   server:
     name: Server

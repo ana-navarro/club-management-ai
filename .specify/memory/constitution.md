@@ -98,7 +98,7 @@ A arquitetura dos frontends adota a segregação estrita por **escopos de págin
 - A cobertura mínima de testes unitários MUST ser de **90% das linhas** (excluindo arquivos de mock e stories).
 - A ausência de testes MUST reprovar a pipeline.
 - **Pipeline de cada repositório**: Cada repositório de `/apps` e `/services` MUST ter uma pipeline no GitHub Actions com testes unitários e validação de lint (ESLint em Node.js/TypeScript, Ruff em Python). Testes E2E não fazem parte desta pipeline.
-- **Pipeline integrada (`club-management-ai`)**: Todo commit no repositório `club-management-ai` MUST rodar uma pipeline com testes unitários, lint e testes de componentes de todos os projetos, além dos testes E2E com Cypress de `/e2e`.
+- **Pipeline integrada (`club-management-ai`)**: Todo commit em qualquer repositório do projeto MUST disparar uma pipeline em `club-management-ai` com testes unitários, lint e testes de componentes de todos os projetos, além dos testes E2E com Cypress de `/e2e`, executados contra o ambiente completo do `docker-compose.yml`.
 - **Pipelines de `/servers`**: Cada projeto de `/servers` MUST ter uma pipeline própria no repositório `club-management-ai`, disparada quando seus arquivos mudam, além de fazer parte da pipeline integrada.
 - **Regra de Work In Progress (@wip)**: Qualquer arquivo anotado com `@wip` MUST ser pulado na execução dos testes e MUST ser excluído do cômputo da meta de cobertura durante a iteração de desenvolvimento.
 
@@ -162,4 +162,4 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
   - `PATCH`: Ajustes de documentação, esclarecimento de termos ou correções textuais.
 - **Conformidade**: Todo plano de implementação MUST passar pelo `Constitution Check` antes da pesquisa e novamente após o design. Violações MUST ser justificadas na tabela de complexidade do plano.
 
-**Version**: 3.3.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
+**Version**: 3.4.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06

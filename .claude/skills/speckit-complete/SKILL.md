@@ -48,7 +48,11 @@ root repository, `club-management-ai`. Nothing else is pushed.
    - Wait for each run with `gh run watch [id] --exit-status`, using a background command so that
      several repositories can be watched at once.
 
-4. **If any run fails, or no run appears:** do not close the task. Report the repository, the
+   Every project push also starts an AI Pipeline run named `AI Pipeline ([branch])`. Runs started
+   before the root was pushed may have used `main` for some projects, so only the newest run of each
+   workflow counts. Wait for the one started by the root's push.
+
+4. **If the newest run of any workflow fails, or no run appears:** do not close the task. Report the repository, the
    workflow, the link and the failing step (`gh run view [id] --log-failed` shows it). Do not
    re-run it or change any code. To finish, fix the problem, run `/speckit-validate`, then run this
    command again.
