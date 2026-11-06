@@ -47,7 +47,7 @@ review. Commit only. Do not push.
 
 4. **Scan the staged files for secrets** with `git -C [project] diff --cached`, in every repository,
    before any commit:
-   - **File names**: `.env` and `.env.*` (except `.env.example`), `*.pem`, `*.key`, `*.p12`, `*.pfx`,
+   - **File names**: `.env`, `.env.*` (except `.env.example`), `.secrets.env`, `*.pem`, `*.key`, `*.p12`, `*.pfx`,
      `id_rsa*`, `credentials*`, `secrets*`.
    - **Added lines**: private key blocks, cloud or API tokens (such as `AKIA...`, `ghp_...`,
      `sk-...`), and hardcoded `password`, `secret` or `token` values. Placeholders and references

@@ -213,6 +213,8 @@ jobs:
           docker compose up -d
           curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/" > /dev/null
           curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/api/health" > /dev/null
+          # The seed creates the initial administrator before the users service starts listening.
+          until docker compose logs users-svc | grep -q "listening on port"; do sleep 3; done
 
       - uses: actions/setup-node@v7
         with:

@@ -6,3 +6,9 @@ services/
 node_modules/
 **/cypress/videos/
 **/cypress/screenshots/
+
+# Environment files: only .env.example is versioned
+.env
+.env.*
+!.env.example
+.secrets.env

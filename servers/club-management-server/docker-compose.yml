@@ -1,6 +1,18 @@
 name: club-management
 
+include:
+  - ../club-management-infra/docker-compose.yml
+
 services:
+  certs:
+    image: alpine/openssl:3.5.2
+    entrypoint: ["sh", "/scripts/generate-certs.sh"]
+    environment:
+      CERTS_DIR: /certs
+    volumes:
+      - ./scripts:/scripts:ro
+      - certs:/certs
+
   nginx:
     image: nginx:1.29-alpine
     ports:
@@ -8,16 +20,36 @@ services:
       - "${ADMIN_PORT:-8081}:8081"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - type: volume
+        source: certs
+        target: /certs
+        read_only: true
+        volume:
+          subpath: gateway
     depends_on:
-      - client
-      - admin
-      - client-bff
-      - admin-bff
+      certs:
+        condition: service_completed_successfully
+      client:
+        condition: service_started
+      admin:
+        condition: service_started
+      client-bff:
+        condition: service_started
+      admin-bff:
+        condition: service_started
+
+  mongo:
+    image: mongo:8.0
+    volumes:
+      - mongo-data:/data/db
 
   client:
     image: node:24-alpine
     working_dir: /app
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - path: ../../apps/club-management-client/.env
+        required: false
     environment:
       VITE_USE_POLLING: "true"
     volumes:
@@ -28,6 +60,9 @@ services:
     image: node:24-alpine
     working_dir: /app
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - path: ../../apps/club-management-admin/.env
+        required: false
     environment:
       VITE_USE_POLLING: "true"
     volumes:
@@ -37,53 +72,107 @@ services:
   client-bff:
     image: python:3.14-slim
     working_dir: /app
-    command: sh -c "pip install -r requirements.txt && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: >-
+      sh -c "pip install -r requirements.txt &&
+      uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      --ssl-keyfile /certs/tls.key --ssl-certfile /certs/tls.crt
+      --ssl-ca-certs /certs/ca.crt --ssl-cert-reqs 2"
+    env_file:
+      - path: ../../services/club-management-client-bff/.env
+        required: false
     environment:
       WATCHFILES_FORCE_POLLING: "true"
-      USERS_SVC_URL: http://users-svc:3001
-      SCHEDULING_SVC_URL: http://scheduling-svc:3002
-      PAYMENT_SVC_URL: http://payment-svc:3003
-      CHAMPIONSHIP_SVC_URL: http://championshp-svc:3004
     volumes:
       - ../../services/club-management-client-bff:/app
+      - type: volume
+        source: certs
+        target: /certs
+        read_only: true
+        volume:
+          subpath: client-bff
     depends_on:
-      - users-svc
-      - scheduling-svc
-      - payment-svc
-      - championshp-svc
+      certs:
+        condition: service_completed_successfully
 
   admin-bff:
     image: python:3.14-slim
     working_dir: /app
-    command: sh -c "pip install -r requirements.txt && uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload"
+    command: >-
+      sh -c "pip install -r requirements.txt &&
+      uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+      --ssl-keyfile /certs/tls.key --ssl-certfile /certs/tls.crt
+      --ssl-ca-certs /certs/ca.crt --ssl-cert-reqs 2"
+    env_file:
+      - path: ../../services/club-management-admin-bff/.env
+        required: false
     environment:
       WATCHFILES_FORCE_POLLING: "true"
-      USERS_SVC_URL: http://users-svc:3001
-      SCHEDULING_SVC_URL: http://scheduling-svc:3002
-      PAYMENT_SVC_URL: http://payment-svc:3003
-      CHAMPIONSHIP_SVC_URL: http://championshp-svc:3004
+      USERS_SVC_URL: https://users-svc:3001
+      TLS_CA: /certs/ca.crt
+      TLS_CERT: /certs/tls.crt
+      TLS_KEY: /certs/tls.key
     volumes:
       - ../../services/club-management-admin-bff:/app
+      - type: volume
+        source: certs
+        target: /certs
+        read_only: true
+        volume:
+          subpath: admin-bff
     depends_on:
-      - users-svc
-      - scheduling-svc
-      - payment-svc
-      - championshp-svc
+      certs:
+        condition: service_completed_successfully
+      users-svc:
+        condition: service_started
 
   users-svc:
     image: node:24-alpine
     working_dir: /app
-    command: sh -c "npm install && npm run dev"
+    command: sh -c "npm install && npm run seed && npm run dev"
+    env_file:
+      - path: ../../services/club-management-users-svc/.env
+        required: false
     environment:
       PORT: "3001"
+      APP_URL: ${ADMIN_APP_URL:-http://localhost:8081}
+      DATABASE_URL: mongodb://mongo:27017
+      DATABASE_NAME: ranking-svc
+      JWT_SECRET: ${JWT_SECRET:-development-only-secret-do-not-use-elsewhere}
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_REQUIRE_TLS: "false"
+      SMTP_USER: ""
+      SMTP_PASSWORD: ""
+      SMTP_FROM: no-reply@club-management.local
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@club-management.local}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-development-only-password}
+      TLS_CA: /certs/ca.crt
+      TLS_CERT: /certs/tls.crt
+      TLS_KEY: /certs/tls.key
     volumes:
       - ../../services/club-management-users-svc:/app
       - /app/node_modules
+      - type: volume
+        source: certs
+        target: /certs
+        read_only: true
+        volume:
+          subpath: users-svc
+    depends_on:
+      certs:
+        condition: service_completed_successfully
+      mongo:
+        condition: service_started
+      mailpit:
+        condition: service_started
 
   scheduling-svc:
     image: node:24-alpine
     working_dir: /app
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - path: ../../services/club-management-scheduling-svc/.env
+        required: false
     environment:
       PORT: "3002"
     volumes:
@@ -94,6 +183,9 @@ services:
     image: node:24-alpine
     working_dir: /app
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - path: ../../services/club-management-payment-svc/.env
+        required: false
     environment:
       PORT: "3003"
     volumes:
@@ -104,8 +196,15 @@ services:
     image: node:24-alpine
     working_dir: /app
     command: sh -c "npm install && npm run dev"
+    env_file:
+      - path: ../../services/club-management-championshp-svc/.env
+        required: false
     environment:
       PORT: "3004"
     volumes:
       - ../../services/club-management-championshp-svc:/app
       - /app/node_modules
+
+volumes:
+  certs:
+  mongo-data:
