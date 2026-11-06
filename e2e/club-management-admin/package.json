@@ -1,0 +1,12 @@
+{
+  "name": "club-management-admin-e2e",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "test": "cypress run"
+  },
+  "devDependencies": {
+    "cypress": "^16.2.1",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,38 @@
+name: Server Pipeline
+
+# Runs when servers/club-management-server changes, and as part of the AI Pipeline.
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - servers/club-management-server/**
+      - .github/workflows/server.yml
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: servers/club-management-server
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
+
+      - name: Validate NGINX
+        run: |
+          docker run --rm \
+            --add-host client:127.0.0.1 \
+            --add-host admin:127.0.0.1 \
+            --add-host client-bff:127.0.0.1 \
+            --add-host admin-bff:127.0.0.1 \
+            -v "$PWD/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.29-alpine nginx -t

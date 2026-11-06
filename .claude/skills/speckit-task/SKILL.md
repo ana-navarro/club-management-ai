@@ -89,8 +89,8 @@ artifacts only: do not change code in any project, and do not commit or push.
    ```
 
    Add `[P]` after the ID for tasks that can run in parallel. Tests are always included, because
-   Principle III requires 80% unit coverage. Backend file names MUST follow
-   `[verb]-[feature]-[type]`, with one adapter per action.
+   Principle III requires 90% line coverage and fails the pipeline without tests. Backend file names
+   MUST follow `[verb]-[feature]-[type]`, with `_` instead of `-` in Python, and one adapter per action.
 
 7. **Report** the feature directory, the affected projects and the number of tasks. The next step
    is `/speckit-implement`.

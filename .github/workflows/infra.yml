@@ -1,0 +1,33 @@
+name: Infra Pipeline
+
+# Runs when servers/club-management-infra changes, and as part of the AI Pipeline.
+
+on:
+  push:
+    branches: ['**']
+    paths:
+      - servers/club-management-infra/**
+      - .github/workflows/infra.yml
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: servers/club-management-infra
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate Docker Compose
+        run: |
+          if [ -f docker-compose.yml ]; then
+            docker compose config --quiet
+          else
+            echo "::notice::No docker-compose.yml yet, so there is nothing to validate."
+          fi

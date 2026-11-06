@@ -37,7 +37,7 @@ review. Commit only. Do not push.
    and run `git -C [project] status --porcelain` in each one.
    - Always use `git -C [project]`, because each project in `apps/` and `services/` is its own repository.
    - The root of the workspace is the `club-management-ai` repository. It versions `specs/`, `.specify/`,
-     `.claude/` and `e2e/`, and it is always affected, because `tasks.md` changes.
+     `.claude/`, `e2e/` and `servers/`, and it is always affected, because `tasks.md` changes.
    - Never run `git init`. If a project with changes has no `.git`, skip it and report it.
    - Any other repository with no changes is not affected.
 

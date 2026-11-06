@@ -4,7 +4,7 @@
 
 ### I. Fronteiras dos Repositórios de Micro-Serviços
 
-O sistema adota arquitetura de micro-serviços em múltiplos repositórios (multi-repo): cada projeto em `/apps`, `/services` e `/servers` MUST ter repositório git próprio. A raiz do workspace é o repositório `club-management-ai`, que versiona `/specs`, `/.specify`, `/.claude`, `/e2e` e a pipeline integrada. Código MUST ser alocado respeitando estritamente os seguintes diretórios:
+O sistema adota arquitetura de micro-serviços em múltiplos repositórios (multi-repo): cada projeto em `/apps` e `/services` MUST ter repositório git próprio. A raiz do workspace é o repositório `club-management-ai`, que versiona `/specs`, `/.specify`, `/.claude`, `/e2e`, `/servers` e a pipeline integrada. Código MUST ser alocado respeitando estritamente os seguintes diretórios:
 
 - `/apps/club-management-client`: Frontend React (TypeScript) — aplicação focada em apresentação, UI mobile-first com Material UI (MUI), isolamento por páginas, consumo com `useSWR` e catálogo via Storybook. MUST conter somente a parte do cliente.
 - `/apps/club-management-admin`: Frontend React (TypeScript) — aplicação focada em apresentação, UI mobile-first com Material UI (MUI), isolamento por páginas, consumo com `useSWR` e catálogo via Storybook. MUST conter somente a parte do admin do clube.
@@ -47,7 +47,7 @@ Todos os micro-serviços em Node.js/TypeScript e os BFFs em Python MUST adotar a
 
 1. Usecases interagem com a camada de infraestrutura EXCLUSIVAMENTE via Output Ports.
 2. Controllers interagem com as regras de negócio EXCLUSIVAMENTE via Input Ports.
-3. Arquivos de backend MUST seguir a convenção `[verbo]-[funcionalidade]-[tipo]` (ex.: `create-user-usecase.ts`, `send-email-adapter.ts`).
+3. Arquivos de backend MUST seguir a convenção `[verbo]-[funcionalidade]-[tipo]` (ex.: `create-user-usecase.ts`, `send-email-adapter.ts`). Em Python, MUST usar `_` em vez de `-`, pois módulos com hífen não podem ser importados (ex.: `create_user_usecase.py`).
 
 #### 2. Frontend React (`/apps/club-management-client` e `/apps/club-management-admin`): Modularidade, SWR e UI System
 
@@ -95,9 +95,11 @@ A arquitetura dos frontends adota a segregação estrita por **escopos de págin
   - `Jest` / `Testing Library` para componentes e hooks (`shared` e `pages`).
   - `Storybook Test Runner` para validar regressão visual e acessibilidade de componentes compartilhados.
   - `Cypress` para testes de fluxo E2E simulando dispositivos móveis (viewport mobile obrigatório).
-- A cobertura mínima de testes unitários MUST ser de **80%** (excluindo arquivos de mock e stories).
+- A cobertura mínima de testes unitários MUST ser de **90% das linhas** (excluindo arquivos de mock e stories).
+- A ausência de testes MUST reprovar a pipeline.
 - **Pipeline de cada repositório**: Cada repositório de `/apps` e `/services` MUST ter uma pipeline no GitHub Actions com testes unitários e validação de lint (ESLint em Node.js/TypeScript, Ruff em Python). Testes E2E não fazem parte desta pipeline.
 - **Pipeline integrada (`club-management-ai`)**: Todo commit no repositório `club-management-ai` MUST rodar uma pipeline com testes unitários, lint e testes de componentes de todos os projetos, além dos testes E2E com Cypress de `/e2e`.
+- **Pipelines de `/servers`**: Cada projeto de `/servers` MUST ter uma pipeline própria no repositório `club-management-ai`, disparada quando seus arquivos mudam, além de fazer parte da pipeline integrada.
 - **Regra de Work In Progress (@wip)**: Qualquer arquivo anotado com `@wip` MUST ser pulado na execução dos testes e MUST ser excluído do cômputo da meta de cobertura durante a iteração de desenvolvimento.
 
 ### IV. Infraestrutura com Hot-Reloading
@@ -141,7 +143,7 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
 - `/test-storybook`: Executa o test-runner do Storybook para validar integridade de stories e acessibilidade.
 - `/run-storybook`: Inicializa o servidor local do Storybook na porta padrão do frontend.
 - `/run-server`: Inicializa o ecossistema com Docker Compose em `/servers/club-management-server` com hot-reloading ativo.
-- `/run-pipeline`: Executa a esteira de validação local completa (linter, tipagem estática, testes e meta de cobertura mínima de 80%).
+- `/run-pipeline`: Executa a esteira de validação local completa (linter, tipagem estática, testes e meta de cobertura mínima de 90% das linhas).
 
 ## Governance
 
@@ -156,4 +158,4 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
   - `PATCH`: Ajustes de documentação, esclarecimento de termos ou correções textuais.
 - **Conformidade**: Todo plano de implementação MUST passar pelo `Constitution Check` antes da pesquisa e novamente após o design. Violações MUST ser justificadas na tabela de complexidade do plano.
 
-**Version**: 3.1.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
+**Version**: 3.2.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
