@@ -58,5 +58,5 @@ root repository, `club-management-ai`. Nothing else is pushed.
    - Create the closing commit, `chore(specs): complete [feature-directory-name]`, in the root
      repository, and push it.
 
-6. **Report** each repository's branch and CI result, and whether the task was closed. Pull requests
-   are not part of this command: if the branches still need merging, say so.
+6. **Report** each repository's branch and CI result, and whether the task was closed. This command
+   does not merge: if the task was closed, say the next step is `/speckit-merge-main [branch]`.

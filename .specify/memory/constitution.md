@@ -136,6 +136,10 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
   - Monitora o status das GitHub Actions dos repositórios impactados.
   - Se a CI falhar: interrompe a finalização e aponta a falha.
   - Se a CI passar: gera e envia o commit de fechamento da task.
+- `/speckit-merge-main [nome-da-branch]`:
+  - Faz o merge da branch em `main` e o push em cada repositório que a possui, com os projetos primeiro e `club-management-ai` por último.
+  - Antes de qualquer merge, verifica em todos esses repositórios se o working tree está limpo, se a CI da branch passou e se não há conflitos. Se algo falhar, não faz merge em nenhum.
+  - NÃO usa force push e NÃO apaga a branch.
 
 ### Comandos de Utilitários
 
@@ -158,4 +162,4 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
   - `PATCH`: Ajustes de documentação, esclarecimento de termos ou correções textuais.
 - **Conformidade**: Todo plano de implementação MUST passar pelo `Constitution Check` antes da pesquisa e novamente após o design. Violações MUST ser justificadas na tabela de complexidade do plano.
 
-**Version**: 3.2.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
+**Version**: 3.3.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
