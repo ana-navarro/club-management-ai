@@ -1,0 +1,4 @@
+# These projects have their own repositories.
+apps/
+services/
+servers/

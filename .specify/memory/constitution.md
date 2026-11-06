@@ -1,34 +1,10 @@
-<!--
-Sync Impact Report
-==================
-Version change: 1.0.0 → 2.0.0
-
-Modified principles (renumerados):
-- IV. Estratégia de Testes e Portões de Qualidade → III.
-- V. Infraestrutura com Hot-Reloading → IV.
-- VI. Workflow de Implementação Automatizada (Ciclo Speckit) → V.
-
-Removed sections:
-- III. Regras de Negócio Inegociáveis (Core Invariants)
-
-Outras alterações:
-- Descrições dos serviços reduzidas ao domínio de cada um.
-- Exemplos de regras de negócio trocados por exemplos neutros.
-
-Follow-up TODOs:
-- TODO(REPO_LAYOUT): a raiz não é repositório git; cada projeto tem o próprio .git.
-- TODO(WORKFLOW_COMMANDS): comandos do Princípio V e utilitários ainda não existem.
-- TODO(TASKS_DIR): `/tasks/[nome-da-task]` difere de `specs/[###-feature]` do Spec Kit.
-- TODO(E2E_TOOL): Princípio I define Cypress; Princípio III aceita Cypress ou Playwright.
--->
-
 # Club Management Constitution
 
 ## Core Principles
 
-### I. Fronteiras do Monorepo de Micro-Serviços
+### I. Fronteiras dos Repositórios de Micro-Serviços
 
-O sistema adota arquitetura de micro-serviços em monorepo desacoplado. Código MUST ser alocado respeitando estritamente os seguintes diretórios:
+O sistema adota arquitetura de micro-serviços em múltiplos repositórios (multi-repo): cada projeto em `/apps`, `/services` e `/servers` MUST ter repositório git próprio. A raiz do workspace é o repositório `club-management-ai`, que versiona `/specs`, `/.specify`, `/.claude`, `/e2e` e a pipeline integrada. Código MUST ser alocado respeitando estritamente os seguintes diretórios:
 
 - `/apps/club-management-client`: Frontend React (TypeScript) — aplicação focada em apresentação, UI mobile-first com Material UI (MUI), isolamento por páginas, consumo com `useSWR` e catálogo via Storybook. MUST conter somente a parte do cliente.
 - `/apps/club-management-admin`: Frontend React (TypeScript) — aplicação focada em apresentação, UI mobile-first com Material UI (MUI), isolamento por páginas, consumo com `useSWR` e catálogo via Storybook. MUST conter somente a parte do admin do clube.
@@ -118,8 +94,10 @@ A arquitetura dos frontends adota a segregação estrita por **escopos de págin
 - **Frontend (React)**:
   - `Jest` / `Testing Library` para componentes e hooks (`shared` e `pages`).
   - `Storybook Test Runner` para validar regressão visual e acessibilidade de componentes compartilhados.
-  - `Cypress` ou `Playwright` para testes de fluxo E2E simulando dispositivos móveis (viewport mobile obrigatório).
+  - `Cypress` para testes de fluxo E2E simulando dispositivos móveis (viewport mobile obrigatório).
 - A cobertura mínima de testes unitários MUST ser de **80%** (excluindo arquivos de mock e stories).
+- **Pipeline de cada repositório**: Cada repositório de `/apps` e `/services` MUST ter uma pipeline no GitHub Actions com testes unitários e validação de lint (ESLint em Node.js/TypeScript, Ruff em Python). Testes E2E não fazem parte desta pipeline.
+- **Pipeline integrada (`club-management-ai`)**: Todo commit no repositório `club-management-ai` MUST rodar uma pipeline com testes unitários, lint e testes de componentes de todos os projetos, além dos testes E2E com Cypress de `/e2e`.
 - **Regra de Work In Progress (@wip)**: Qualquer arquivo anotado com `@wip` MUST ser pulado na execução dos testes e MUST ser excluído do cômputo da meta de cobertura durante a iteração de desenvolvimento.
 
 ### IV. Infraestrutura com Hot-Reloading
@@ -130,10 +108,10 @@ A pasta `/servers/club-management-server` MUST conter os manifestos `docker-comp
 
 A esteira de automação de novas funcionalidades MUST seguir estritamente o ciclo de 4 etapas:
 
-1. **Planejamento (`/speckit-task`)**: Cria o diretório de contexto em `/tasks/[nome-da-task]` com um checklist detalhado das portas, usecases, adapters, rotas, componentes (locais ou `shared/`), stories e testes a serem construídos.
+1. **Planejamento (`/speckit-task`)**: Cria o diretório de contexto em `/specs/[###-feature]` com um checklist detalhado das portas, usecases, adapters, rotas, componentes (locais ou `shared/`), stories e testes a serem construídos.
 2. **Execução (`/speckit-implement`)**: Implementa o código estritamente dentro dos parâmetros do checklist da task ativa, sem gerar commits nem interagir com branches remotas.
-3. **Commit Headless (`/speckit-validate`)**: Reconcilia o checklist marcando os itens concluídos e justificando omissões. Executa a varredura contra inclusão inadvertida de segredos (`.env`, certificados, credenciais). Realiza o commit diretamente com Conventional Commits em inglês, **SEM exibir arquivos modificados para revisão e SEM solicitar aprovação interativa do usuário**.
-4. **Finalização (`/speckit-complete`)**: Realiza `git push` de todas as branches pendentes para o repositório remoto, aguarda a aprovação das pipelines de CI (GitHub Actions) e apenas consolida a task após o sucesso das execuções remotas.
+3. **Commit Headless (`/speckit-validate`)**: Reconcilia o checklist marcando os itens concluídos e justificando omissões. Executa a varredura contra inclusão inadvertida de segredos (`.env`, certificados, credenciais). Realiza o commit diretamente em cada repositório afetado, com Conventional Commits em inglês, **SEM exibir arquivos modificados para revisão e SEM solicitar aprovação interativa do usuário**.
+4. **Finalização (`/speckit-complete`)**: Realiza `git push` de todas as branches pendentes de cada repositório afetado, aguarda a aprovação das pipelines de CI (GitHub Actions) e apenas consolida a task após o sucesso das execuções remotas.
 
 ## Comandos de Desenvolvimento (Prompt Commands)
 
@@ -141,16 +119,16 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
 
 - `/speckit-task [descrição]`:
   - Se os requisitos estiverem vagos, solicita detalhamento imediato.
-  - Cria o diretório `tasks/[nome-da-task]/`.
+  - Cria o diretório `specs/[###-feature]/`.
   - Gera o arquivo de planejamento com checklist estruturado por camadas e módulos de frontend.
 - `/speckit-implement`:
   - Carrega a task ativa e seu respectivo checklist.
   - Implementa as alterações de código exclusivamente nos arquivos necessários.
   - NÃO realiza commits, pushes ou validações de CI.
 - `/speckit-validate`:
-  - Atualiza o status do checklist da task em `/tasks`.
+  - Atualiza o status do checklist da task em `/specs/[###-feature]`.
   - Verifica ausência de arquivos sensíveis (`.env`, tokens) no staging.
-  - Executa diretamente o commit das alterações utilizando Conventional Commits (ex.: `feat(club-management-client): add shared button with storybook`), **sem pedir confirmação ao usuário e sem listar diffs arquivo a arquivo**.
+  - Executa diretamente o commit das alterações em cada repositório afetado, utilizando Conventional Commits (ex.: `feat(club-management-client): add shared button with storybook`), **sem pedir confirmação ao usuário e sem listar diffs arquivo a arquivo**.
 - `/speckit-complete`:
   - Executa `git push` nos repositórios afetados pela tarefa.
   - Monitora o status das GitHub Actions dos repositórios impactados.
@@ -178,4 +156,4 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
   - `PATCH`: Ajustes de documentação, esclarecimento de termos ou correções textuais.
 - **Conformidade**: Todo plano de implementação MUST passar pelo `Constitution Check` antes da pesquisa e novamente após o design. Violações MUST ser justificadas na tabela de complexidade do plano.
 
-**Version**: 2.0.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
+**Version**: 3.1.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06

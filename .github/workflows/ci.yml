@@ -1,0 +1,280 @@
+name: AI Pipeline
+
+# Integrated pipeline: checks every project together. For each project it uses the branch with the
+# same name as this repository's branch, or main if there is none.
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [club-management-client, club-management-admin]
+    defaults:
+      run:
+        working-directory: project
+    steps:
+      - name: Resolve project branch
+        id: ref
+        working-directory: .
+        env:
+          URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+        run: |
+          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
+            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/${{ matrix.project }}
+          ref: ${{ steps.ref.outputs.ref }}
+          path: project
+
+      - name: Report missing project
+        if: hashFiles('project/package.json') == ''
+        run: echo "::notice::No package.json yet, so there is nothing to check."
+
+      - uses: actions/setup-node@v7
+        if: hashFiles('project/package.json') != ''
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: project/package-lock.json
+
+      - name: Install dependencies
+        if: hashFiles('project/package.json') != ''
+        run: npm ci
+
+      - name: ESLint
+        if: hashFiles('project/package.json') != ''
+        run: npm run lint
+
+      - name: Type check and build
+        if: hashFiles('project/package.json') != ''
+        run: npm run build
+
+      - name: Unit tests with coverage
+        if: hashFiles('project/package.json') != ''
+        run: |
+          if [ -n "$(node -p "require('./package.json').scripts?.['test:coverage'] ?? ''")" ]; then
+            npm run test:coverage
+          else
+            echo "::warning::No test:coverage script, so tests and the 80% coverage gate did not run."
+          fi
+
+      - name: Component tests (Storybook)
+        if: hashFiles('project/package.json') != ''
+        run: |
+          if [ -n "$(node -p "require('./package.json').scripts?.['test:storybook'] ?? ''")" ]; then
+            npx playwright install --with-deps chromium
+            npm run test:storybook
+          else
+            echo "::warning::No test:storybook script, so component tests did not run."
+          fi
+
+  node-service:
+    name: Service (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        project:
+          - club-management-users-svc
+          - club-management-scheduling-svc
+          - club-management-payment-svc
+          - club-management-championshp-svc
+    defaults:
+      run:
+        working-directory: project
+    steps:
+      - name: Resolve project branch
+        id: ref
+        working-directory: .
+        env:
+          URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+        run: |
+          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
+            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/${{ matrix.project }}
+          ref: ${{ steps.ref.outputs.ref }}
+          path: project
+
+      - name: Report missing project
+        if: hashFiles('project/package.json') == ''
+        run: echo "::notice::No package.json yet, so there is nothing to check."
+
+      - uses: actions/setup-node@v7
+        if: hashFiles('project/package.json') != ''
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: project/package-lock.json
+
+      - name: Install dependencies
+        if: hashFiles('project/package.json') != ''
+        run: npm ci
+
+      - name: ESLint
+        if: hashFiles('project/package.json') != ''
+        run: npm run lint
+
+      - name: Type check
+        if: hashFiles('project/package.json') != ''
+        run: npm run typecheck
+
+      - name: Unit tests with coverage
+        if: hashFiles('project/package.json') != ''
+        run: |
+          if [ -n "$(node -p "require('./package.json').scripts?.['test:coverage'] ?? ''")" ]; then
+            npm run test:coverage
+          else
+            echo "::warning::No test:coverage script, so tests and the 80% coverage gate did not run."
+          fi
+
+  python-bff:
+    name: BFF (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [club-management-client-bff, club-management-admin-bff]
+    defaults:
+      run:
+        working-directory: project
+    steps:
+      - name: Resolve project branch
+        id: ref
+        working-directory: .
+        env:
+          URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+        run: |
+          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
+            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository_owner }}/${{ matrix.project }}
+          ref: ${{ steps.ref.outputs.ref }}
+          path: project
+
+      - name: Report missing project
+        if: hashFiles('project/requirements.txt', 'project/requirements-dev.txt', 'project/pyproject.toml') == ''
+        run: echo "::notice::No Python project yet, so there is nothing to check."
+
+      - uses: actions/setup-python@v7
+        if: hashFiles('project/requirements.txt', 'project/requirements-dev.txt', 'project/pyproject.toml') != ''
+        with:
+          python-version: '3.14'
+          cache: pip
+          cache-dependency-path: project/requirements*.txt
+
+      - name: Install dependencies
+        if: hashFiles('project/requirements.txt', 'project/requirements-dev.txt', 'project/pyproject.toml') != ''
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (Ruff)
+        if: hashFiles('project/requirements.txt', 'project/requirements-dev.txt', 'project/pyproject.toml') != ''
+        run: ruff check .
+
+      - name: Type check
+        if: hashFiles('project/requirements.txt', 'project/requirements-dev.txt', 'project/pyproject.toml') != ''
+        run: mypy .
+
+      - name: Unit tests with coverage
+        if: hashFiles('project/requirements.txt', 'project/requirements-dev.txt', 'project/pyproject.toml') != ''
+        run: |
+          if [ -d tests ]; then
+            pytest --cov=. --cov-fail-under=80
+          else
+            echo "::warning::No tests directory, so tests and the 80% coverage gate did not run."
+          fi
+
+  e2e:
+    name: E2E (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [club-management-client, club-management-admin]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check for a Cypress project
+        id: cypress
+        env:
+          PROJECT: ${{ matrix.project }}
+        run: |
+          if [ -f "e2e/$PROJECT/package.json" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No Cypress project in e2e/$PROJECT, so E2E tests did not run."
+          fi
+
+      - name: Resolve project branch
+        id: ref
+        if: steps.cypress.outputs.exists == 'true'
+        env:
+          URL: https://github.com/${{ github.repository_owner }}/${{ matrix.project }}.git
+        run: |
+          if git ls-remote --exit-code "$URL" "refs/heads/$GITHUB_REF_NAME" >/dev/null; then
+            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.cypress.outputs.exists == 'true'
+        with:
+          repository: ${{ github.repository_owner }}/${{ matrix.project }}
+          ref: ${{ steps.ref.outputs.ref }}
+          path: project
+
+      - uses: actions/setup-node@v7
+        if: steps.cypress.outputs.exists == 'true'
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            project/package-lock.json
+            e2e/${{ matrix.project }}/package-lock.json
+
+      - name: Build and start the app
+        if: steps.cypress.outputs.exists == 'true'
+        working-directory: project
+        run: |
+          npm ci
+          npm run build
+          nohup npm run preview -- --port 4173 --host 127.0.0.1 > preview.log 2>&1 &
+          curl --retry 30 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:4173 > /dev/null
+
+      - name: Cypress (mobile viewport)
+        if: steps.cypress.outputs.exists == 'true'
+        working-directory: e2e/${{ matrix.project }}
+        run: |
+          npm ci
+          npx cypress run --config baseUrl=http://127.0.0.1:4173,viewportWidth=390,viewportHeight=844
