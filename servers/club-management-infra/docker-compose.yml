@@ -1,5 +1,10 @@
 services:
   mailpit:
     image: axllent/mailpit:v1.27
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     ports:
       - "${MAILPIT_UI_PORT:-8025}:8025"
