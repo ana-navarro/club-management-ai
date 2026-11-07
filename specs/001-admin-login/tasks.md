@@ -311,3 +311,4 @@
 ## Pipeline
 
 - [X] T190 Wait for the stack with a real login, limit the wait and show the logs on cancellation in .github/workflows/ci.yml
+- [X] T191 Run the E2E jobs on ubuntu-22.04, whose kernel still runs mongo:8.0, in .github/workflows/ci.yml
