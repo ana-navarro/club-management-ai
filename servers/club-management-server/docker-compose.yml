@@ -18,6 +18,11 @@ services:
     ports:
       - "${CLIENT_PORT:-8080}:8080"
       - "${ADMIN_PORT:-8081}:8081"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ && wget -q -O /dev/null http://127.0.0.1:8081/"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - type: volume
@@ -40,6 +45,11 @@ services:
 
   mongo:
     image: mongo:8.0
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - mongo-data:/data/db
 
@@ -52,9 +62,14 @@ services:
         required: false
     environment:
       VITE_USE_POLLING: "true"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../apps/club-management-client:/app
-      - /app/node_modules
+      - client-node-modules:/app/node_modules
 
   admin:
     image: node:24-alpine
@@ -65,9 +80,14 @@ services:
         required: false
     environment:
       VITE_USE_POLLING: "true"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../apps/club-management-admin:/app
-      - /app/node_modules
+      - admin-node-modules:/app/node_modules
 
   client-bff:
     image: python:3.14-slim
@@ -82,8 +102,15 @@ services:
         required: false
     environment:
       WATCHFILES_FORCE_POLLING: "true"
+    healthcheck:
+      test: ["CMD", "python", "/healthcheck/check_https_health.py", "client-bff"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../services/club-management-client-bff:/app
+      - pip-cache:/root/.cache/pip
+      - ./scripts:/healthcheck:ro
       - type: volume
         source: certs
         target: /certs
@@ -111,8 +138,15 @@ services:
       TLS_CA: /certs/ca.crt
       TLS_CERT: /certs/tls.crt
       TLS_KEY: /certs/tls.key
+    healthcheck:
+      test: ["CMD", "python", "/healthcheck/check_https_health.py", "admin-bff"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../services/club-management-admin-bff:/app
+      - pip-cache:/root/.cache/pip
+      - ./scripts:/healthcheck:ro
       - type: volume
         source: certs
         target: /certs
@@ -149,9 +183,15 @@ services:
       TLS_CA: /certs/ca.crt
       TLS_CERT: /certs/tls.crt
       TLS_KEY: /certs/tls.key
+    healthcheck:
+      test: ["CMD", "node", "/healthcheck/check-https-health.cjs", "users-svc", "3001"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../services/club-management-users-svc:/app
-      - /app/node_modules
+      - users-svc-node-modules:/app/node_modules
+      - ./scripts:/healthcheck:ro
       - type: volume
         source: certs
         target: /certs
@@ -162,9 +202,9 @@ services:
       certs:
         condition: service_completed_successfully
       mongo:
-        condition: service_started
+        condition: service_healthy
       mailpit:
-        condition: service_started
+        condition: service_healthy
 
   scheduling-svc:
     image: node:24-alpine
@@ -175,9 +215,14 @@ services:
         required: false
     environment:
       PORT: "3002"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../services/club-management-scheduling-svc:/app
-      - /app/node_modules
+      - scheduling-svc-node-modules:/app/node_modules
 
   payment-svc:
     image: node:24-alpine
@@ -188,9 +233,14 @@ services:
         required: false
     environment:
       PORT: "3003"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3003/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../services/club-management-payment-svc:/app
-      - /app/node_modules
+      - payment-svc-node-modules:/app/node_modules
 
   championshp-svc:
     image: node:24-alpine
@@ -201,10 +251,22 @@ services:
         required: false
     environment:
       PORT: "3004"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3004/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
     volumes:
       - ../../services/club-management-championshp-svc:/app
-      - /app/node_modules
+      - championshp-svc-node-modules:/app/node_modules
 
 volumes:
   certs:
   mongo-data:
+  pip-cache:
+  client-node-modules:
+  admin-node-modules:
+  users-svc-node-modules:
+  scheduling-svc-node-modules:
+  payment-svc-node-modules:
+  championshp-svc-node-modules:

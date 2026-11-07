@@ -1,0 +1,15 @@
+{
+  "name": "club-management-workspace",
+  "private": true,
+  "description": "Shortcuts for the Club Management local environment.",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "node servers/club-management-server/scripts/dev.mjs up",
+    "dev:down": "node servers/club-management-server/scripts/dev.mjs down",
+    "dev:logs": "node servers/club-management-server/scripts/dev.mjs logs",
+    "test:scripts": "node --test --experimental-test-coverage --test-coverage-lines=90 --test-coverage-exclude=\"**/*.test.mjs\" \"servers/club-management-server/scripts/*.test.mjs\""
+  }
+}

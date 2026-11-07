@@ -9,6 +9,7 @@ on:
       - servers/club-management-server/**
       - servers/club-management-infra/docker-compose.yml
       - .github/workflows/server.yml
+      - package.json
   workflow_call:
   workflow_dispatch:
 
@@ -24,6 +25,14 @@ jobs:
         working-directory: servers/club-management-server
     steps:
       - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Test the development command
+        working-directory: .
+        run: npm run test:scripts
 
       - name: Validate Docker Compose
         run: docker compose config --quiet

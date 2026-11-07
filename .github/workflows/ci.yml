@@ -206,24 +206,15 @@ jobs:
             git clone --quiet --depth 1 --branch "$ref" "$url" "$path"
           done
 
-      - name: Start the stack
-        timeout-minutes: 10
-        working-directory: servers/club-management-server
-        env:
-          PORT_TO_CHECK: ${{ matrix.port }}
-        run: |
-          docker compose up -d
-          curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/" > /dev/null
-          curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/api/health" > /dev/null
-          # The seed creates the initial administrator before the users service starts listening,
-          # so this login only succeeds when the whole path to that service is ready.
-          curl --retry 60 --retry-all-errors --retry-delay 5 --max-time 30 -fsS -o /dev/null             -H 'Content-Type: application/json'             -d '{"email":"admin@club-management.local","password":"development-only-password"}'             http://127.0.0.1:8081/api/auth/login
-
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: e2e/${{ matrix.project }}/package-lock.json
+
+      - name: Start the stack
+        timeout-minutes: 11
+        run: npm run dev -- --detach
 
       - name: Cypress (mobile viewport)
         working-directory: e2e/${{ matrix.project }}
