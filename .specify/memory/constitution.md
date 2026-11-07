@@ -8,9 +8,9 @@ O sistema adota arquitetura de micro-serviços em múltiplos repositórios (mult
 
 - `/apps/club-management-client`: Frontend React (TypeScript) — aplicação focada em apresentação, UI mobile-first com Material UI (MUI), isolamento por páginas, consumo com `useSWR` e catálogo via Storybook. MUST conter somente a parte do cliente.
 - `/apps/club-management-admin`: Frontend React (TypeScript) — aplicação focada em apresentação, UI mobile-first com Material UI (MUI), isolamento por páginas, consumo com `useSWR` e catálogo via Storybook. MUST conter somente a parte do admin do clube.
-- `/services/club-management-admin-bff`: Backend for Frontend (Python) do frontend admin — proxy, agregador e sanitizador de dados para o frontend; NÃO possui regras de orquestração de domínio, apenas consome os micro-serviços internos e formata respostas para a UI.
-- `/services/club-management-client-bff`: Backend for Frontend (Python) do frontend cliente — proxy, agregador e sanitizador de dados para o frontend; NÃO possui regras de orquestração de domínio, apenas consome os micro-serviços internos e formata respostas para a UI.
-- `/services/club-management-users-svc`: Serviço de Usuários (Node.js/TypeScript) — domínio de usuários e classificações.
+- `/services/club-management-admin-bff`: Backend for Frontend (Python) do frontend admin — orquestrador dos micro-serviços internos e sanitizador de dados para o frontend; coordena as chamadas entre serviços e entrega à UI apenas os dados necessários. As regras de negócio de cada domínio ficam nos serviços.
+- `/services/club-management-client-bff`: Backend for Frontend (Python) do frontend cliente — orquestrador dos micro-serviços internos e sanitizador de dados para o frontend; coordena as chamadas entre serviços e entrega à UI apenas os dados necessários. As regras de negócio de cada domínio ficam nos serviços.
+- `/services/club-management-users-svc`: Serviço de Usuários (Node.js/TypeScript) — todo o backend relacionado a usuários, como login, recuperação de senha, cadastro de clubes e classificações.
 - `/services/club-management-scheduling-svc`: Serviço de Agendamento (Node.js/TypeScript) — domínio de aluguéis e agenda.
 - `/services/club-management-payment-svc`: Serviço de Pagamentos (Node.js/TypeScript) — domínio de pagamentos.
 - `/services/club-management-championshp-svc`: Serviço de Campeonatos (Node.js/TypeScript) — domínio de campeonatos.
@@ -19,11 +19,20 @@ O sistema adota arquitetura de micro-serviços em múltiplos repositórios (mult
 - `/e2e/club-management-client`: Testes automatizados com Cypress da parte do cliente.
 - `/e2e/club-management-admin`: Testes automatizados com Cypress da parte do admin.
 
+**Variáveis de ambiente**: Todo projeto MUST ter um `.env` e um `.env.example`. Apenas o `.env.example` MUST ser versionado, sem valores reais. Os arquivos `.env` e `.secrets.env` NUNCA podem ser enviados a um repositório, e cada `.gitignore` MUST bloqueá-los.
+
 **Rationale**: Manter fronteiras explícitas impede o acoplamento entre regras de negócio desiguais (ex: regras financeiras dentro do serviço de agendamento), permitindo escalabilidade e evolução autônoma de cada domínio.
 
 ### II. Arquitetura Hexagonal, Frontend Modular e Clean Code
 
 O fluxo de dados MUST respeitar a direção: Frontend → BFF correspondente → Micro-Serviços de Domínio (`club-management-users-svc`, `club-management-scheduling-svc`, `club-management-payment-svc`, `club-management-championshp-svc`). `club-management-client` MUST consumir somente `club-management-client-bff`, e `club-management-admin` MUST consumir somente `club-management-admin-bff`. Saltos diretos entre Frontend e os serviços de domínio são terminantemente PROIBIDOS.
+
+- **Frontend**: MUST se limitar a apresentação e validação de formato. Regras de negócio MUST ficar no backend.
+- **BFF**: MUST orquestrar os serviços e limpar os dados entregues ao frontend. Quando uma operação envolver mais de um serviço, é o BFF que MUST coordenar as chamadas.
+- **Serviços**: SHOULD NOT se comunicar entre si. Exceções MUST ser justificadas no `Constitution Check` do plano.
+- **Comunicação interna**: Toda chamada entre gateway, BFF e serviços MUST usar mTLS, com criptografia e certificado nos dois lados. Um serviço MUST recusar quem não apresentar um certificado válido. Um serviço passa a seguir esta regra na primeira task em que receber chamadas de outro projeto.
+
+- **Tipagem estrita**: Código TypeScript MUST NOT usar `as`, `!`, `any`, `unknown` ou `never`. Dados externos MUST ser validados em tempo de execução, e valores opcionais MUST ser tratados com verificações. O ESLint de cada projeto MUST reprovar esses usos.
 
 #### 1. Backend (Arquitetura Hexagonal)
 
@@ -35,7 +44,7 @@ Todos os micro-serviços em Node.js/TypeScript e os BFFs em Python MUST adotar a
   - `middlewares/`: Autenticação, autorização, validação de tokens e guards.
   - `dto/`: Interfaces e esquemas de validação de payload de entrada/saída (Zod ou Pydantic).
 - `domain/`:
-  - `usecases/`: Contém TODAS as regras de negócio puras. Não acessa bibliotecas de infraestrutura.
+  - `usecases/`: Nos serviços, contém TODAS as regras de negócio puras. Nos BFFs, contém a orquestração das chamadas. Não acessa bibliotecas de infraestrutura.
   - `models/`: Entidades e regras intrínsecas de domínio.
   - `ports/`: Interfaces abstratas de Input (usadas pelos controllers) e Output (usadas pelos usecases para falar com adapters).
 - `infra/`:
@@ -74,6 +83,8 @@ A arquitetura dos frontends adota a segregação estrita por **escopos de págin
 
 1. **Privacidade de Módulo**: Componentes, hooks, services, contexts e reducers alocados dentro de uma pasta em `src/pages/[PageName]/` são de uso EXCLUSIVO daquele conjunto de páginas. É estritamente PROIBIDO que `PageA` importe elementos privados de `PageB`.
 2. **Elevação para `shared/`**: Se um componente, hook ou serviço inicialmente criado dentro de uma página passar a ser necessário para outra página distinta, ele MUST ser refatorado e promovido para `src/shared/` antes de ser consumido pelo novo contexto.
+
+**Formulários**: Todo formulário MUST ser validado com um schema Zod antes do envio ao BFF, e os dados enviados MUST ser os validados pelo schema. Essa validação não substitui a do backend, que continua decidindo.
 
 **Gerenciamento de Dados e API (SWR)**:
 
@@ -162,4 +173,4 @@ A esteira de automação de novas funcionalidades MUST seguir estritamente o cic
   - `PATCH`: Ajustes de documentação, esclarecimento de termos ou correções textuais.
 - **Conformidade**: Todo plano de implementação MUST passar pelo `Constitution Check` antes da pesquisa e novamente após o design. Violações MUST ser justificadas na tabela de complexidade do plano.
 
-**Version**: 3.4.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06
+**Version**: 4.4.0 | **Ratified**: 2026-11-06 | **Last Amended**: 2026-11-06

@@ -177,7 +177,8 @@ jobs:
 
   e2e:
     name: E2E (${{ matrix.project }})
-    runs-on: ubuntu-latest
+    # mongo:8.0 refuses to start on Linux kernel 6.19 or newer (SERVER-121912). This image still has kernel 6.8.
+    runs-on: ubuntu-22.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -206,6 +207,7 @@ jobs:
           done
 
       - name: Start the stack
+        timeout-minutes: 10
         working-directory: servers/club-management-server
         env:
           PORT_TO_CHECK: ${{ matrix.port }}
@@ -213,6 +215,9 @@ jobs:
           docker compose up -d
           curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/" > /dev/null
           curl --retry 60 --retry-all-errors --retry-delay 5 -fsS "http://127.0.0.1:$PORT_TO_CHECK/api/health" > /dev/null
+          # The seed creates the initial administrator before the users service starts listening,
+          # so this login only succeeds when the whole path to that service is ready.
+          curl --retry 60 --retry-all-errors --retry-delay 5 --max-time 30 -fsS -o /dev/null             -H 'Content-Type: application/json'             -d '{"email":"admin@club-management.local","password":"development-only-password"}'             http://127.0.0.1:8081/api/auth/login
 
       - uses: actions/setup-node@v7
         with:
@@ -228,7 +233,7 @@ jobs:
           npx cypress run
 
       - name: Show stack logs
-        if: failure()
+        if: failure() || cancelled()
         working-directory: servers/club-management-server
         run: docker compose logs --no-color --tail 100
 
