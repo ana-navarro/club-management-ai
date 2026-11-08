@@ -99,6 +99,7 @@ function formatAddresses(ports) {
     `  Client:          ${address(8080)}`,
     `  Admin:           ${address(8081)}`,
     `  Emails de teste: ${address(8025)}`,
+    `  Google e Facebook simulados: ${address(8090)}`,
   ].join('\n')
 }
 

@@ -31,3 +31,28 @@ jobs:
           else
             echo "::notice::No docker-compose.yml yet, so there is nothing to validate."
           fi
+
+  oauth-mock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: servers/club-management-infra/oauth-mock
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Type check
+        run: mypy .
+
+      - name: Test
+        run: pytest

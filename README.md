@@ -34,6 +34,7 @@ A primeira execução baixa imagens e instala dependências, então leva mais te
 | Client | http://localhost:8080 | `CLIENT_PORT` |
 | Admin | http://localhost:8081 | `ADMIN_PORT` |
 | Emails de teste | http://localhost:8025 | `MAILPIT_UI_PORT` |
+| Google e Facebook simulados | http://localhost:8090 | `OAUTH_MOCK_PORT` |
 
 Para trocar uma porta, defina a variável em `servers/club-management-server/.env`, usando `.env.example` como base.
 
@@ -42,6 +43,18 @@ Para trocar uma porta, defina a variável em `servers/club-management-server/.en
 O ambiente usa um MongoDB e um servidor de emails de teste locais. Nenhum email real é enviado, e nada se conecta aos serviços reais.
 
 O administrador inicial é `admin@club-management.local`, com a senha `development-only-password`. Ele só existe no ambiente local.
+
+### Sistema do cliente
+
+Em http://localhost:8080, o cliente entra com email e senha, cria a conta pelo botão **Criar conta** ou entra com Google ou Facebook.
+
+- **Cadastro**: a conta só entra depois de confirmar o email pelo link, que chega no Mailpit.
+- **Google**: a primeira entrada cria a conta já confirmada, ou entra na conta de cliente que já tem o mesmo email.
+- **Facebook**: como o Facebook não diz se o email é verificado, a primeira entrada de cada perfil manda um link ao email. A ligação só acontece quando a pessoa confirma na página do link. Depois disso, o Facebook entra direto.
+
+Por padrão, Google e Facebook são o provedor simulado em http://localhost:8090, que mostra um formulário para escolher o email e o nome devolvidos. Nenhuma credencial é necessária.
+
+Para testar com os provedores reais, copie as credenciais de `.secrets.env` para `servers/club-management-server/.env`, junto com as URLs reais listadas em `servers/club-management-server/.env.example`, e rode `npm run dev:down` e `npm run dev`. Os detalhes estão em [specs/003-client-login/quickstart.md](specs/003-client-login/quickstart.md).
 
 ### Hot reload
 

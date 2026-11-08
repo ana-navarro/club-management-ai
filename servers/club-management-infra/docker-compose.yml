@@ -8,3 +8,28 @@ services:
       retries: 120
     ports:
       - "${MAILPIT_UI_PORT:-8025}:8025"
+
+  # Google and Facebook stand-in, for development and CI (specs/003-client-login/contracts/oauth-mock.md).
+  oauth-mock:
+    image: python:3.14-slim
+    working_dir: /app
+    command: >-
+      sh -c "pip install -r requirements.txt &&
+      uvicorn main:app --host 0.0.0.0 --port 8090 --reload"
+    environment:
+      WATCHFILES_FORCE_POLLING: "true"
+      # The id_token issuer, which users-svc checks against GOOGLE_ISSUERS.
+      MOCK_GOOGLE_ISSUER: http://oauth-mock:8090/google
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 120
+    ports:
+      - "${OAUTH_MOCK_PORT:-8090}:8090"
+    volumes:
+      - ./oauth-mock:/app
+      - oauth-mock-pip-cache:/root/.cache/pip
+
+volumes:
+  oauth-mock-pip-cache:

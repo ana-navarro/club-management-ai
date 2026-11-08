@@ -13,6 +13,7 @@ const CONFIG = {
       ],
     },
     mailpit: { ports: [{ target: 8025, published: '8025' }] },
+    'oauth-mock': { ports: [{ target: 8090, published: '8090' }] },
   },
 }
 const line = (Service, State, Health = '', ExitCode = 0) => JSON.stringify({ Service, State, Health, ExitCode })
@@ -21,6 +22,7 @@ const READY = [
   line('mongo', 'running', 'healthy'),
   line('nginx', 'running', 'healthy'),
   line('mailpit', 'running', 'healthy'),
+  line('oauth-mock', 'running', 'healthy'),
 ].join('\n')
 
 // A system where each answer can be replaced. `ps` answers come in order, repeating the last one.
@@ -96,6 +98,7 @@ describe('up', () => {
     assert.match(deps.output(), /Client: +http:\/\/localhost:8080/)
     assert.match(deps.output(), /Admin: +http:\/\/localhost:9001/)
     assert.match(deps.output(), /Emails de teste: http:\/\/localhost:8025/)
+    assert.match(deps.output(), /Google e Facebook simulados: http:\/\/localhost:8090/)
     assert.match(deps.output(), /npm run dev:down/)
   })
 
@@ -103,7 +106,7 @@ describe('up', () => {
     const waiting = [line('certs', 'exited'), line('mongo', 'running', 'starting')].join('\n')
     const deps = createDeps({ states: ['', waiting, waiting, READY] })
     assert.equal(await up(deps, { detach: true }), EXIT_OK)
-    assert.equal(deps.printed.filter((text) => text === 'Serviços prontos: 1 de 4').length, 1)
+    assert.equal(deps.printed.filter((text) => text === 'Serviços prontos: 1 de 5').length, 1)
     assert.match(deps.output(), /Ambiente pronto em 4s/)
   })
 

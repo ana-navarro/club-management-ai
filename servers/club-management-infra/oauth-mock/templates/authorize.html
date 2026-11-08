@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mock $provider sign-in</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #f4f7f7; color: #224248; }
+      main { max-width: 420px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 8px; }
+      label { display: block; margin: 12px 0 4px; }
+      input[type=text], input[type=email] { width: 100%; box-sizing: border-box; padding: 8px; font-size: 16px; }
+      .check { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+      .actions { display: flex; gap: 12px; margin-top: 24px; }
+      button { flex: 1; padding: 10px; font-size: 16px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Mock $provider</h1>
+      <p>Development only. Choose the identity the provider sends back.</p>
+      <form method="post">
+        $hidden
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" value="mock@club-management.local">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" value="Mock Person">
+        <label for="subject">Subject (optional, derived from the email)</label>
+        <input id="subject" name="subject" type="text" value="">
+        <div class="check">
+          <input id="email_verified" name="email_verified" type="checkbox" value="true" checked>
+          <label for="email_verified">Email verified</label>
+        </div>
+        <div class="check">
+          <input id="no_email" name="no_email" type="checkbox" value="true">
+          <label for="no_email">Do not send the email</label>
+        </div>
+        <div class="actions">
+          <button type="submit" name="action" value="confirm">Confirm</button>
+          <button type="submit" name="action" value="cancel">Cancel</button>
+        </div>
+      </form>
+    </main>
+  </body>
+</html>
