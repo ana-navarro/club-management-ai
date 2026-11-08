@@ -177,8 +177,14 @@ export const readSocialLinkPath = (email: string, count = 1) =>
     return readLinkPath(firstMessage(messages).ID, '/confirm-social-link').then((link) => link.path)
   })
 
+// Waits for the session, because right after a sign in the app may still be storing it.
 export const readCurrentUserId = () =>
-  cy.window().then((win) =>
+  cy
+    .window()
+    .should((win) => {
+      expect(win.sessionStorage.getItem('session'), 'session').to.be.a('string')
+    })
+    .then((win) =>
     cy
       .request({ url: '/api/users/me', headers: { Authorization: `Bearer ${readSessionToken(win)}` } })
       .its('body.id'),
