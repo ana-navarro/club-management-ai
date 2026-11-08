@@ -102,6 +102,11 @@ services:
         required: false
     environment:
       WATCHFILES_FORCE_POLLING: "true"
+      USERS_SVC_URL: https://users-svc:3001
+      CLIENT_APP_URL: ${CLIENT_APP_URL:-http://localhost:8080}
+      TLS_CA: /certs/ca.crt
+      TLS_CERT: /certs/tls.crt
+      TLS_KEY: /certs/tls.key
     healthcheck:
       test: ["CMD", "python", "/healthcheck/check_https_health.py", "client-bff"]
       interval: 5s
@@ -120,6 +125,8 @@ services:
     depends_on:
       certs:
         condition: service_completed_successfully
+      users-svc:
+        condition: service_started
 
   admin-bff:
     image: python:3.14-slim
@@ -168,7 +175,21 @@ services:
         required: false
     environment:
       PORT: "3001"
-      APP_URL: ${ADMIN_APP_URL:-http://localhost:8081}
+      ADMIN_APP_URL: ${ADMIN_APP_URL:-http://localhost:8081}
+      CLIENT_APP_URL: ${CLIENT_APP_URL:-http://localhost:8080}
+      # Google and Facebook default to the stand-in. The browser opens the authorize URL, so it uses
+      # localhost; users-svc calls the others by container name. See .env.example for the real ones.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-mock-google-client}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-mock-google-secret}
+      GOOGLE_AUTHORIZE_URL: ${GOOGLE_AUTHORIZE_URL:-http://localhost:8090/google/authorize}
+      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL:-http://oauth-mock:8090/google/token}
+      GOOGLE_JWKS_URL: ${GOOGLE_JWKS_URL:-http://oauth-mock:8090/google/jwks}
+      GOOGLE_ISSUERS: ${GOOGLE_ISSUERS:-http://oauth-mock:8090/google}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-mock-facebook-app}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-mock-facebook-secret}
+      FACEBOOK_AUTHORIZE_URL: ${FACEBOOK_AUTHORIZE_URL:-http://localhost:8090/facebook/dialog/oauth}
+      FACEBOOK_GRAPH_URL: ${FACEBOOK_GRAPH_URL:-http://oauth-mock:8090/facebook}
+      FACEBOOK_GRAPH_VERSION: ${FACEBOOK_GRAPH_VERSION:-v23.0}
       DATABASE_URL: mongodb://mongo:27017
       DATABASE_NAME: ranking-svc
       JWT_SECRET: ${JWT_SECRET:-development-only-secret-do-not-use-elsewhere}
@@ -204,6 +225,8 @@ services:
       mongo:
         condition: service_healthy
       mailpit:
+        condition: service_healthy
+      oauth-mock:
         condition: service_healthy
 
   scheduling-svc:

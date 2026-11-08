@@ -18,6 +18,7 @@ const PORT_VARIABLES = new Map([
   [8080, 'CLIENT_PORT'],
   [8081, 'ADMIN_PORT'],
   [8025, 'MAILPIT_UI_PORT'],
+  [8090, 'OAUTH_MOCK_PORT'],
 ])
 
 export async function checkDocker(run) {

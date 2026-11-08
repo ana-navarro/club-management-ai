@@ -52,6 +52,7 @@ describe('checkPorts', () => {
     { service: 'nginx', target: 8080, published: 8080 },
     { service: 'nginx', target: 8081, published: 9001 },
     { service: 'mailpit', target: 8025, published: 8025 },
+    { service: 'oauth-mock', target: 8090, published: 8090 },
     { service: 'other', target: 1, published: 1 },
   ]
 
@@ -59,17 +60,18 @@ describe('checkPorts', () => {
     const problems = await checkPorts(ports, new Set(), async () => false)
     assert.deepEqual(
       problems.map((problem) => problem.split('.')[0]),
-      ['Porta 8080 em uso', 'Porta 9001 em uso', 'Porta 8025 em uso', 'Porta 1 em uso'],
+      ['Porta 8080 em uso', 'Porta 9001 em uso', 'Porta 8025 em uso', 'Porta 8090 em uso', 'Porta 1 em uso'],
     )
     assert.match(problems[0], /CLIENT_PORT/)
     assert.match(problems[1], /ADMIN_PORT/)
     assert.match(problems[2], /MAILPIT_UI_PORT/)
-    assert.match(problems[3], /troque a porta/)
+    assert.match(problems[3], /OAUTH_MOCK_PORT/)
+    assert.match(problems[4], /troque a porta/)
   })
 
   it('ignores the ports of the running environment', async () => {
     const asked = []
-    const problems = await checkPorts(ports, new Set(['nginx', 'mailpit', 'other']), async (port) => {
+    const problems = await checkPorts(ports, new Set(['nginx', 'mailpit', 'oauth-mock', 'other']), async (port) => {
       asked.push(port)
       return false
     })
